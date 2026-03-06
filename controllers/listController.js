@@ -133,6 +133,22 @@ exports.leaveList = async (req, res) => {
   }
 };
 
+exports.regenerateInviteCode = async (req, res) => {
+  try {
+    const list = await List.findOne({ _id: req.params.listId, created_by: req.user._id });
+    if (!list) return res.status(404).json({ error: 'Solo el creador puede cambiar el codigo' });
+
+    const crypto = require('crypto');
+    list.invite_code = crypto.randomBytes(4).toString('hex').toUpperCase();
+    await list.save();
+
+    req.app.get('io')?.to(`list:${req.params.listId}`).emit('list-updated', req.params.listId);
+    res.json({ invite_code: list.invite_code });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
+
 exports.removeMember = async (req, res) => {
   try {
     const { user_id } = req.body;

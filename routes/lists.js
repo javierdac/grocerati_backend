@@ -11,6 +11,7 @@ router.patch('/:listId', auth, listCtrl.updateList);
 router.delete('/:listId', auth, listCtrl.deleteList);
 router.post('/:listId/leave', auth, listCtrl.leaveList);
 router.post('/:listId/remove-member', auth, listCtrl.removeMember);
+router.post('/:listId/regenerate-code', auth, listCtrl.regenerateInviteCode);
 
 router.get('/:listId/items', auth, itemCtrl.getItems);
 router.post('/:listId/items', auth, itemCtrl.addItem);
