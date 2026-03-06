@@ -59,6 +59,7 @@ exports.joinList = async (req, res) => {
     const totalItems = await Item.countDocuments({ list_id: list._id });
     const pendingItems = await Item.countDocuments({ list_id: list._id, completed: false });
 
+    req.app.get('io')?.to(`list:${list._id.toString()}`).emit('list-updated', list._id.toString());
     res.json({ ...populated.toObject(), totalItems, pendingItems });
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -90,6 +91,7 @@ exports.updateList = async (req, res) => {
       { new: true },
     ).populate('members', 'name email');
     if (!list) return res.status(404).json({ error: 'Lista no encontrada' });
+    req.app.get('io')?.to(`list:${req.params.listId}`).emit('list-updated', req.params.listId);
     res.json(list);
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -101,9 +103,11 @@ exports.deleteList = async (req, res) => {
     const list = await List.findOne({ _id: req.params.listId, created_by: req.user._id });
     if (!list) return res.status(404).json({ error: 'Solo el creador puede eliminar la lista' });
 
+    const listId = list._id.toString();
     await Item.deleteMany({ list_id: list._id });
     await list.deleteOne();
 
+    req.app.get('io')?.to(`list:${listId}`).emit('list-deleted', listId);
     res.json({ message: 'Lista eliminada' });
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -122,6 +126,7 @@ exports.leaveList = async (req, res) => {
     list.members = list.members.filter((m) => m.toString() !== req.user._id.toString());
     await list.save();
 
+    req.app.get('io')?.to(`list:${req.params.listId}`).emit('list-updated', req.params.listId);
     res.json({ message: 'Saliste de la lista' });
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -141,6 +146,7 @@ exports.removeMember = async (req, res) => {
     list.members = list.members.filter((m) => m.toString() !== user_id);
     await list.save();
 
+    req.app.get('io')?.to(`list:${req.params.listId}`).emit('list-updated', req.params.listId);
     res.json({ message: 'Miembro eliminado' });
   } catch (err) {
     res.status(500).json({ error: err.message });

@@ -1,5 +1,7 @@
 require('dotenv').config();
 const express = require('express');
+const http = require('http');
+const { Server } = require('socket.io');
 const cors = require('cors');
 const rateLimit = require('express-rate-limit');
 const connectDB = require('./config/db');
@@ -10,6 +12,13 @@ if (!process.env.JWT_SECRET) {
 }
 
 const app = express();
+const server = http.createServer(app);
+const io = new Server(server, {
+  cors: { origin: '*' },
+  transports: ['websocket', 'polling'],
+});
+
+app.set('io', io);
 
 app.use(cors());
 app.use(express.json());
@@ -27,8 +36,18 @@ app.use('/lists', require('./routes/lists'));
 
 app.get('/', (req, res) => res.json({ message: 'Grocerati API' }));
 
+io.on('connection', (socket) => {
+  socket.on('join-list', (listId) => {
+    socket.join(`list:${listId}`);
+  });
+
+  socket.on('leave-list', (listId) => {
+    socket.leave(`list:${listId}`);
+  });
+});
+
 const PORT = process.env.PORT || 3001;
 
 connectDB().then(() => {
-  app.listen(PORT, '0.0.0.0', () => console.log(`Server running on 0.0.0.0:${PORT}`));
+  server.listen(PORT, '0.0.0.0', () => console.log(`Server running on 0.0.0.0:${PORT}`));
 });
